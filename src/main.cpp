@@ -14,13 +14,56 @@
 #include "raylib.h"
 #include "raymath.h"
 
-#include "imgui.h"
-#include "rlImGui.h"
-#include "ryml.hpp"
+#define CLAY_IMPLEMENTATION
+#include "clay.h"
+#include "renderers/raylib/clay_renderer_raylib.c"
 
-#define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
+const int FONT_ID_BODY_16 = 0;
 
+const Clay_Color COLOR_LIGHT = {224, 215, 210, 255};
+const Clay_Color COLOR_RED =  {168, 66, 28, 255};
+const Clay_Color COLOR_ORANGE =  {225, 138, 50, 255};
+
+// Layout config is just a struct that can be declared statically, or inline
+Clay_LayoutConfig sidebarItemLayout =  {
+    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(50) },
+	.padding = CLAY_PADDING_ALL(16)
+	
+};
+
+// Re-useable components are just normal functions
+void SidebarItemComponent(Clay_String text) {
+    CLAY(CLAY_LAYOUT(sidebarItemLayout), CLAY_RECTANGLE({ .color = COLOR_ORANGE })) {
+		CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .textColor = {255, 255, 255, 255}, .fontSize = 24 }));
+	}
+}
+
+// An example function to begin the "root" of your layout tree
+Clay_RenderCommandArray CreateLayout() {
+    Clay_BeginLayout();
+
+    // An example of laying out a UI with a fixed width sidebar and flexible width main content
+    CLAY(CLAY_ID("OuterContainer"), CLAY_LAYOUT({ .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(16), .childGap = 16 }), CLAY_RECTANGLE({ .color = {250,250,255,255} })) {
+		CLAY(CLAY_ID("SideBar"),
+            CLAY_LAYOUT({.sizing = { .width = CLAY_SIZING_FIXED(300), .height = CLAY_SIZING_GROW(0) }, .padding = CLAY_PADDING_ALL(16), .childGap = 16, .layoutDirection = CLAY_TOP_TO_BOTTOM }),
+            CLAY_RECTANGLE({ .color = COLOR_LIGHT })
+        ) {
+            // Standard C code like loops etc work inside components
+            for (int i = 0; i < 5; i++) {
+                SidebarItemComponent(CLAY_STRING("Hello, world"));
+            }
+        }
+        CLAY(CLAY_ID("MainContent"), CLAY_LAYOUT({ .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }}), CLAY_RECTANGLE({ .color = COLOR_LIGHT })) {
+ 			
+		}
+    }
+	return Clay_EndLayout();
+   
+};
+
+void HandleClayErrors(Clay_ErrorData errorData) {
+    printf("%s", errorData.errorText.chars);
+}
 
 int main(int argc, char* argv[])
 {
@@ -30,38 +73,38 @@ int main(int argc, char* argv[])
 	int screenHeight = 800;
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-	InitWindow(screenWidth, screenHeight, "raylib-Extras [ImGui] example - simple ImGui Demo");
+	//InitWindow(screenWidth, screenHeight, "raylib-Extras [ImGui] example - simple ImGui Demo");
+	Clay_Raylib_Initialize(1024, 768, "Introducing Clay Demo", FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT); // Extra parameters to this function are new since the video was published
+
 	SetTargetFPS(144);
-	rlImGuiSetup(true);
-	bool show_another_window=true;
+
+	uint64_t totalMemorySize = Clay_MinMemorySize();
+		Clay_Arena clayMemory = Clay_CreateArenaWithCapacityAndMemory(totalMemorySize, (char *)malloc(totalMemorySize));
+		Clay_Initialize(clayMemory, Clay_Dimensions {1024,768}, Clay_ErrorHandler { HandleClayErrors });
+
+		Clay_SetMeasureTextFunction(Raylib_MeasureText, 0);
+
+	Raylib_fonts[FONT_ID_BODY_16] = {
+        .fontId = FONT_ID_BODY_16,
+		.font = LoadFontEx ("Roboto-Regular.ttf", 48, 0, 400)
+    };
+    SetTextureFilter(Raylib_fonts[FONT_ID_BODY_16].font.texture, TEXTURE_FILTER_BILINEAR);
+
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
+		Clay_SetLayoutDimensions({ (float)GetScreenWidth(), (float)GetScreenHeight() });
+
+		Clay_RenderCommandArray renderCommands = CreateLayout();
+		
 		BeginDrawing();
 		ClearBackground(DARKGRAY);
 
-		// start ImGui Conent
-		rlImGuiBegin();
-
-		GuiButton(Rectangle {10,10, 100,20}, "Hello GUI");
-
-		// show ImGui Content
-		bool open = true;
-		ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-		ImGui::End();
-		//ImGui::ShowDemoWindow(&open);
-
-		// end ImGui Content
-		rlImGuiEnd();
+		Clay_Raylib_Render(renderCommands);
 
 		EndDrawing();
 		//----------------------------------------------------------------------------------
 	}
-	rlImGuiShutdown();
-
 	// De-Initialization
 	//--------------------------------------------------------------------------------------   
 	CloseWindow();        // Close window and OpenGL context

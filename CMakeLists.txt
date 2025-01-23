@@ -1,4 +1,4 @@
-project(HelloWorld)
+project(claygui)
 cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -6,17 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std:c++20")
 
 
-include(deps/imgui.cmake)
+
 include(deps/raylib.cmake)
-include(deps/raygui.cmake)
-include(deps/rlimgui.cmake)
-include(deps/ryml.cmake)
-include(deps/box2d.cmake)
-include(deps/jolt.cmake)
+include(deps/clay.cmake)
 
-
-
-add_executable(rlgui src/main.cpp)
+add_executable(claygui src/main.cpp)
 #target_include_directories(gui PUBLIC "src/cosmos")
 
 #
@@ -24,16 +18,16 @@ add_executable(rlgui src/main.cpp)
 # ${FETCHCONTENT_BASE_DIR} points to the fetched directory
 #
 # Include raygui directory
-target_include_directories(rlgui SYSTEM PRIVATE "${FETCHCONTENT_BASE_DIR}/raygui-src/src")
+target_include_directories(claygui SYSTEM PRIVATE "${FETCHCONTENT_BASE_DIR}/clay-src")
 
 #include_directories(igui ${SDL2_INCLUDE_DIRS})
-target_link_libraries(rlgui PUBLIC  raylib rlimgui imgui ryml::ryml)
+target_link_libraries(claygui PUBLIC  raylib)
 
 
 if (MSVC)
-    target_compile_options(rlgui PRIVATE /W4)
+    target_compile_options(claygui PRIVATE /W4)
 else()
-    target_compile_options(rlgui PRIVATE -Wall -Wextra -pedantic)
+    target_compile_options(claygui PRIVATE -Wall -Wextra -pedantic)
 endif()
 
 
